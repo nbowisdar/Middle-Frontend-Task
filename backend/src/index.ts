@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { MarksTable } from './db/tables'
 import { eq } from 'drizzle-orm'
+import { cors } from 'hono/cors'
 
 const db = drizzle('app.db')
 const marks = new Hono()
@@ -14,7 +15,7 @@ marks.get('/list', async (c) => {
   return c.json({ marks: marks, count: marks.length })
 })
 
-marks.post('', zValidator('json', MarkSchema), async (c) => {
+marks.post('/', zValidator('json', MarkSchema), async (c) => {
   const body = c.req.valid('json')
   await db.insert(MarksTable).values(body)
   return c.json({ message: 'Mark received!', data: body })
@@ -37,6 +38,20 @@ marks.delete('/:id', async (c) => {
 })
 
 const app = new Hono()
+
+app.use(
+  '/*',
+  cors({
+    origin: 'http://localhost:3001',
+    allowHeaders: ['*'],
+    allowMethods: ['*'],
+    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+    maxAge: 600,
+    credentials: false,
+  }),
+)
+
 app.route('/mark', marks)
+
 
 export default app
